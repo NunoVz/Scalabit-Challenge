@@ -1,24 +1,16 @@
 package main
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/google/go-github/v88/github"
+	"github.com/NunoVz/Scalabit-Challenge/internal/github"
+	"github.com/NunoVz/Scalabit-Challenge/internal/handlers"
 	"github.com/joho/godotenv"
-	"golang.org/x/oauth2"
 )
 
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	if _, err := fmt.Fprint(w, "OK"); err != nil {
-		log.Printf("Error writing health response: %v", err)
-	}
-}
 func main() {
 	//.env
 	_ = godotenv.Load()
@@ -26,46 +18,22 @@ func main() {
 	owner := os.Getenv("GITHUB_OWNER")
 	repo := os.Getenv("GITHUB_REPO")
 
-
-	//GIT AUTH
-	ctx := context.Background()
-	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
-	tc := oauth2.NewClient(ctx, ts)
-	
-	client, err := github.NewClient(github.WithHTTPClient(tc))
+	// Init Dependencies
+	ghClient, err := github.NewClient(token)
 	if err != nil {
 		log.Fatalf("Error creating GitHub client: %v", err)
 	}
-
-
-
-
+	issueHandler := handlers.NewIssueHandler(ghClient, owner, repo)
 
 	// Endpoints---------------
 	mux := http.NewServeMux()
 
 	// Health check
-	mux.HandleFunc("GET /health", healthHandler)
+	mux.HandleFunc("GET /health", handlers.HealthHandler)
 
-	// List issues 
-	mux.HandleFunc("GET /issues", func(w http.ResponseWriter, r *http.Request) {
-		opts := &github.IssueListByRepoOptions{
-			State: "all", 
-		}
+	// Issues endpoints
+	mux.HandleFunc("GET /issues", issueHandler.ListIssues)
 
-		issues, _, err := client.Issues.ListByRepo(r.Context(), owner, repo, opts)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error presenting issues: %v", err), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		
-		
-		if err := json.NewEncoder(w).Encode(issues); err != nil {
-			log.Printf("Error encoding issues JSON: %v", err)
-		}
-	})
 	port := ":8080"
 	log.Printf("Server running on port %s", port)
 
