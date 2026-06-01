@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scalabit-challenge-api
+  labels:
+    app: scalabit-challenge-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scalabit-challenge-api
+  template:
+    metadata:
+      labels:
+        app: scalabit-challenge-api
+    spec:
+      containers:
+        - name: api
+          image: scalabit-challenge-api:latest
+          imagePullPolicy: Never # Use Local Image
+          ports:
+            - containerPort: 8080
+          env:
+            # Empty Variables for Now
+            - name: GITHUB_TOKEN
+              value: ""
+            - name: GITHUB_OWNER
+              value: "NunoVz"
+            - name: GITHUB_REPO
+              value: "Scalabit-Challenge"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080

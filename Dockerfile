@@ -5,12 +5,12 @@ COPY . .
 RUN go mod tidy
 
 # Compile
-RUN go build -o devsecops-api ./api
+RUN go build -o scalabit-challenge-api ./api
 
 FROM alpine:latest
 WORKDIR /app
 
-COPY --from=builder /app/devsecops-api .
+COPY --from=builder /app/scalabit-challenge-api .
 
 EXPOSE 8080
-CMD ["./devsecops-api"]
+CMD ["./scalabit-challenge-api"]
