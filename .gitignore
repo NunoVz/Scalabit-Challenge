@@ -1,0 +1,6 @@
+# Binaries
+*.exe
+*.out
+
+# IDE specific files
+.vscode/
