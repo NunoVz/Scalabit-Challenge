@@ -13,6 +13,10 @@ import (
 	"golang.org/x/oauth2"
 )
 
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "OK")
+}
+
 func main() {
 	//.env
 	_ = godotenv.Load()
@@ -30,15 +34,18 @@ func main() {
 		log.Fatalf("Error creating GitHub client: %v", err)
 	}
 
+
+
+
+
+	// Endpoints---------------
 	mux := http.NewServeMux()
 
-	// Endpoint de health check
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "OK")
-	})
+	// Health check
+	mux.HandleFunc("GET /health", healthHandler)
 
 
-	//List issues endpoint
+	//List issues 
 	mux.HandleFunc("GET /issues", func(w http.ResponseWriter, r *http.Request) {
 		opts := &github.IssueListByRepoOptions{
 			State: "all", 

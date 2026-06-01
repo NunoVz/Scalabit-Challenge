@@ -1,0 +1,40 @@
+name: CD - Deploy to Minikube
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+
+      # 1. Init Cluster
+      - name: Start Minikube
+        uses: medyagh/setup-minikube@master
+
+      # 2. Testing Cluster
+      - name: Verify Kubernetes Cluster
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      # 3.Build
+      - name: Build Docker Image inside Minikube
+        run: |
+          eval $(minikube -p minikube docker-env)
+          docker build -t devsecops-api:latest .
+
+      # 4.Apply Manifests 
+      - name: Deploy to Minikube
+        run: |
+          echo " Aqui vais correr o kubectl apply -f internal/platform/k8s/ "
+          # kubectl apply -f internal/platform/k8s/deployment.yml
