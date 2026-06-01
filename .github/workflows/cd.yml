@@ -18,7 +18,7 @@ jobs:
       - name: Build Docker Image
         run: |
           eval $(minikube -p minikube docker-env)
-          docker build -t devsecops-api:latest .
+          docker build -t scalabit-challenge-api:latest .
 
       - name: Deploy to Kubernetes
         run: |
@@ -28,4 +28,4 @@ jobs:
       - name: Verify Deployment
         run: |
           # Wait for Heath Check
-          kubectl rollout status deployment/devsecops-api --timeout=90s
+          kubectl rollout status deployment/scalabit-challenge-api --timeout=90s

@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: devsecops-api
+  name: scalabit-challenge-api
   labels:
-    app: devsecops-api
+    app: scalabit-challenge-api
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: devsecops-api
+      app: scalabit-challenge-api
   template:
     metadata:
       labels:
-        app: devsecops-api
+        app: scalabit-challenge-api
     spec:
       containers:
         - name: api
-          image: devsecops-api:latest
+          image: scalabit-challenge-api:latest
           imagePullPolicy: Never # Use Local Image
           ports:
             - containerPort: 8080
