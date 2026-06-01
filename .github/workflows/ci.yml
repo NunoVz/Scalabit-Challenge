@@ -1,0 +1,45 @@
+name: CI - PR Validation
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint-and-sec:
+    name: Lint & Security Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+
+      # 1. Linter Go
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12.2
+
+      # 2. SAST
+      - name: Run gosec
+        uses: securego/gosec@master
+        with:
+          args: ./...
+
+  tests:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+
+      - name: Run Tests
+        run: go test -v -race -cover ./...
