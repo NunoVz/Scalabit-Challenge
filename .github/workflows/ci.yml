@@ -2,7 +2,7 @@ name: CI - PR Validation
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 jobs:
   lint-and-sec:
@@ -19,9 +19,9 @@ jobs:
 
       # 1. Linter Go
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
+          version: v2.12.2
 
       # 2. SAST
       - name: Run gosec
