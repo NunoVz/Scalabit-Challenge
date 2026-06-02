@@ -2,7 +2,6 @@ package github
 
 import (
 	"context"
-	"net/http"
 
 	gh "github.com/google/go-github/v88/github"
 	"golang.org/x/oauth2"
@@ -19,14 +18,17 @@ type gitHubClient struct {
 
 func NewClient(token string) (Client, error) {
 	ctx := context.Background()
-	var tc *http.Client
+	var client *gh.Client
+	var err error
 
 	if token != "" {
 		ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
-		tc = oauth2.NewClient(ctx, ts)
+		tc := oauth2.NewClient(ctx, ts)
+		client, err = gh.NewClient(gh.WithHTTPClient(tc))
+	} else {
+		client, err = gh.NewClient()
 	}
 
-	client, err := gh.NewClient(gh.WithHTTPClient(tc))
 	if err != nil {
 		return nil, err
 	}

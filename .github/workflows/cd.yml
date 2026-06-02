@@ -28,4 +28,4 @@ jobs:
       - name: Verify Deployment
         run: |
           # Wait for Heath Check
-          kubectl rollout status deployment/scalabit-challenge-api --timeout=90s
+          kubectl rollout status deployment/scalabit-challenge-api --timeout=90s || (kubectl get pods && kubectl logs -l app=scalabit-challenge-api && exit 1)
