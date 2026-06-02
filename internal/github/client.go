@@ -19,14 +19,17 @@ type gitHubClient struct {
 
 func NewClient(token string) (Client, error) {
 	ctx := context.Background()
-	var tc *http.Client
+	var client *gh.Client
+	var err error
 
 	if token != "" {
 		ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
-		tc = oauth2.NewClient(ctx, ts)
+		tc := oauth2.NewClient(ctx, ts)
+		client, err = gh.NewClient(gh.WithHTTPClient(tc))
+	} else {
+		client, err = gh.NewClient()
 	}
 
-	client, err := gh.NewClient(gh.WithHTTPClient(tc))
 	if err != nil {
 		return nil, err
 	}
