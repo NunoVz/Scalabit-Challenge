@@ -68,12 +68,15 @@ func TestPRHandler_CheckPRStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockClient := &mockGitHubClient{mockGetPRStatus: tt.mockGetStatus}
-			handler := NewPRHandler(mockClient, owner, repo)
+			handler := NewPRHandler(mockClient)
 
-			req, err := http.NewRequest("GET", "/prs/"+tt.prID+"/status", nil)
+			url := "/repos/" + owner + "/" + repo + "/prs/" + tt.prID + "/status"
+			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
+			req.SetPathValue("owner", owner)
+			req.SetPathValue("repo", repo)
 			req.SetPathValue("id", tt.prID)
 
 			rr := httptest.NewRecorder()

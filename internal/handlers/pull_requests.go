@@ -10,19 +10,18 @@ import (
 
 type PRHandler struct {
 	client github.Client
-	owner  string
-	repo   string
 }
 
-func NewPRHandler(client github.Client, owner, repo string) *PRHandler {
+func NewPRHandler(client github.Client) *PRHandler {
 	return &PRHandler{
 		client: client,
-		owner:  owner,
-		repo:   repo,
 	}
 }
 
 func (h *PRHandler) CheckPRStatus(w http.ResponseWriter, r *http.Request) {
+	owner := r.PathValue("owner")
+	repo := r.PathValue("repo")
+
 	idStr := r.PathValue("id")
 	prNumber, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -30,7 +29,7 @@ func (h *PRHandler) CheckPRStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	status, err := h.client.GetPRStatus(r.Context(), h.owner, h.repo, prNumber)
+	status, err := h.client.GetPRStatus(r.Context(), owner, repo, prNumber)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error checking PR status: %v", err), http.StatusInternalServerError)
 		return

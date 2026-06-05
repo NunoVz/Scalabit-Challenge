@@ -25,20 +25,19 @@ func (r *CreateIssueRequest) Validate() error {
 
 type IssueHandler struct {
 	client github.Client
-	owner  string
-	repo   string
 }
 
-func NewIssueHandler(client github.Client, owner, repo string) *IssueHandler {
+func NewIssueHandler(client github.Client) *IssueHandler {
 	return &IssueHandler{
 		client: client,
-		owner:  owner,
-		repo:   repo,
 	}
 }
 
 func (h *IssueHandler) ListIssues(w http.ResponseWriter, r *http.Request) {
-	issues, err := h.client.ListIssues(r.Context(), h.owner, h.repo)
+	owner := r.PathValue("owner")
+	repo := r.PathValue("repo")
+
+	issues, err := h.client.ListIssues(r.Context(), owner, repo)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error listing issues: %v", err), http.StatusInternalServerError)
 		return
@@ -48,6 +47,9 @@ func (h *IssueHandler) ListIssues(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *IssueHandler) CreateIssue(w http.ResponseWriter, r *http.Request) {
+	owner := r.PathValue("owner")
+	repo := r.PathValue("repo")
+
 	var req CreateIssueRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid request body: %v", err), http.StatusBadRequest)
@@ -59,7 +61,7 @@ func (h *IssueHandler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	issue, err := h.client.CreateIssue(r.Context(), h.owner, h.repo, req.Title, req.Body)
+	issue, err := h.client.CreateIssue(r.Context(), owner, repo, req.Title, req.Body)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error creating issue: %v", err), http.StatusInternalServerError)
 		return
@@ -69,6 +71,9 @@ func (h *IssueHandler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *IssueHandler) DeleteIssue(w http.ResponseWriter, r *http.Request) {
+	owner := r.PathValue("owner")
+	repo := r.PathValue("repo")
+
 	idStr := r.PathValue("id")
 	issueNumber, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -76,7 +81,7 @@ func (h *IssueHandler) DeleteIssue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	issue, err := h.client.CloseIssue(r.Context(), h.owner, h.repo, issueNumber)
+	issue, err := h.client.CloseIssue(r.Context(), owner, repo, issueNumber)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error closing issue: %v", err), http.StatusInternalServerError)
 		return
