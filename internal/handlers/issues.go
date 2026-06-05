@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/NunoVz/Scalabit-Challenge/internal/github"
 )
@@ -65,6 +66,27 @@ func (h *IssueHandler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, issue)
+}
+
+func (h *IssueHandler) DeleteIssue(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	issueNumber, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid issue ID. Must be a number.", http.StatusBadRequest)
+		return
+	}
+
+	issue, err := h.client.CloseIssue(r.Context(), h.owner, h.repo, issueNumber)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error closing issue: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]string{
+		"message": fmt.Sprintf("Issue %d successfully closed", issueNumber),
+		"title":   issue.GetTitle(),
+	}
+	writeJSON(w, http.StatusOK, response)
 }
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
