@@ -14,10 +14,18 @@ spec:
       labels:
         app: scalabit-challenge-api
     spec:
+      securityContext:
+        runAsNonRoot: true
       containers:
         - name: api
           image: scalabit-challenge-api:latest
           imagePullPolicy: Never # Use Local Image
+          #Trivy suggested this
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 8080
           resources:
