@@ -39,7 +39,7 @@ jobs:
           scan-ref: '.'
           format: 'table'
           exit-code: '1'
-          severity: 'CRITICAL'
+          severity: 'CRITICAL,HIGH'
 
       # 4. Secret Scanning
       - name: Secret Scanning (Gitleaks)
@@ -82,7 +82,14 @@ jobs:
           TOTAL_COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
           echo "Total Test Coverage: $TOTAL_COVERAGE%"
           
-          awk -v cov="$TOTAL_COVERAGE" -v min="80.0" 'BEGIN { if (cov < min) { print "Coverage " cov "% is below threshold of " min "%"; exit 1 } else { print "Coverage " cov "% is acceptable." } }'
+          # Remove decimal part for comparison
+          TOTAL_COVERAGE_INT=${TOTAL_COVERAGE%.*}
+          if [ "$TOTAL_COVERAGE_INT" -lt 80 ]; then
+            echo "Coverage $TOTAL_COVERAGE% is below threshold of 80%"
+            exit 1
+          else
+            echo "Coverage $TOTAL_COVERAGE% is acceptable."
+          fi
 
   deploy:
     name: Build & Deploy to Minikube
