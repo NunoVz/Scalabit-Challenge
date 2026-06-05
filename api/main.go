@@ -33,6 +33,7 @@ func main() {
 
 	// Issues endpoints
 	mux.HandleFunc("GET /issues", issueHandler.ListIssues)
+	mux.HandleFunc("POST /issues", issueHandler.CreateIssue)
 
 	port := ":8080"
 	log.Printf("Server running on port %s", port)
