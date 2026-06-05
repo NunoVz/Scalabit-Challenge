@@ -1,21 +1,56 @@
-name: CD - Deploy to Minikube
+name: CI/CD - PR Validation
 
 on:
-  workflow_run:
-    workflows: ["CI - PR Validation"] 
-    types:
-      - completed 
+  pull_request:
+    branches: [ main, develop ]
 
 jobs:
-  deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    name: Build & Deploy to Minikube
+  lint-and-sec:
+    name: Lint & Security Check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout correct code from PR
+      - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          go-version: '1.26.x'
+
+      # 1. Linter Go
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12.2
+
+      # 2. SAST
+      - name: Run gosec
+        uses: securego/gosec@master
+        with:
+          args: ./...
+
+  tests:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+
+      - name: Run Tests
+        run: go test -v -race -cover ./...
+
+  deploy:
+    name: Build & Deploy to Minikube
+    needs: [lint-and-sec, tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup Minikube
         uses: medyagh/setup-minikube@latest
