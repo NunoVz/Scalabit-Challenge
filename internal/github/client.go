@@ -12,6 +12,7 @@ type Client interface {
 	ListIssues(ctx context.Context, owner, repo string) ([]*gh.Issue, error)
 	CreateIssue(ctx context.Context, owner, repo, title, body string) (*gh.Issue, error)
 	CloseIssue(ctx context.Context, owner, repo string, issueNumber int) (*gh.Issue, error)
+	GetPRStatus(ctx context.Context, owner, repo string, prNumber int) (string, error)
 }
 
 type gitHubClient struct {
@@ -58,4 +59,36 @@ func (g *gitHubClient) CloseIssue(ctx context.Context, owner, repo string, issue
 	req := &gh.IssueRequest{State: &state}
 	issue, _, err := g.client.Issues.Edit(ctx, owner, repo, issueNumber, req)
 	return issue, err
+}
+
+func (g *gitHubClient) GetPRStatus(ctx context.Context, owner, repo string, prNumber int) (string, error) {
+	// 1. Get PR Details
+	pr, _, err := g.client.PullRequests.Get(ctx, owner, repo, prNumber)
+	if err != nil {
+		return "", err
+	}
+
+	sha := pr.GetHead().GetSHA()
+
+	// 2. Get the list of checks/pipelines for that commit
+	result, _, err := g.client.Checks.ListCheckRunsForRef(ctx, owner, repo, sha, nil)
+	if err != nil {
+		return "", err
+	}
+
+	if result.GetTotal() == 0 {
+		return "no_checks_found", nil
+	}
+
+	// 3. Evaluate the pipeline result
+	status := "success"
+	for _, run := range result.CheckRuns {
+		if run.GetStatus() != "completed" {
+			status = "pending"
+		} else if run.GetConclusion() == "failure" || run.GetConclusion() == "cancelled" || run.GetConclusion() == "timed_out" {
+			return "failure", nil 
+		}
+	}
+
+	return status, nil
 }
