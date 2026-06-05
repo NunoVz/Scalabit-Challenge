@@ -46,7 +46,7 @@ func main() {
 	srv := &http.Server{
 		Addr:              port,
 		Handler:           mux,
-		ReadHeaderTimeout: 5 * time.Second, 
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	if err := srv.ListenAndServe(); err != nil {

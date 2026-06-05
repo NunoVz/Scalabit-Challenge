@@ -245,3 +245,19 @@ func TestIssueHandler_ListIssues(t *testing.T) {
 		})
 	}
 }
+
+// Forçar o erro de escrita no json
+type mockIssuesErrorResponseWriter struct{}
+
+func (m *mockIssuesErrorResponseWriter) Header() http.Header { return http.Header{} }
+func (m *mockIssuesErrorResponseWriter) Write([]byte) (int, error) {
+	return 0, errors.New("simulated write error")
+}
+func (m *mockIssuesErrorResponseWriter) WriteHeader(statusCode int) {}
+
+func TestWriteJSON_Error(t *testing.T) {
+	w := &mockIssuesErrorResponseWriter{}
+
+	data := map[string]string{"message": "hello"}
+	writeJSON(w, http.StatusOK, data)
+}
