@@ -24,6 +24,7 @@ func main() {
 		log.Fatalf("Error creating GitHub client: %v", err)
 	}
 	issueHandler := handlers.NewIssueHandler(ghClient, owner, repo)
+	prHandler := handlers.NewPRHandler(ghClient, owner, repo)
 
 	// Endpoints---------------
 	mux := http.NewServeMux()
@@ -35,6 +36,9 @@ func main() {
 	mux.HandleFunc("GET /issues", issueHandler.ListIssues)
 	mux.HandleFunc("POST /issues", issueHandler.CreateIssue)
 	mux.HandleFunc("DELETE /issues/{id}", issueHandler.DeleteIssue)
+
+	// Pull Requests endpoints
+	mux.HandleFunc("GET /prs/{id}/status", prHandler.CheckPRStatus)
 
 	port := ":8080"
 	log.Printf("Server running on port %s", port)
