@@ -96,12 +96,15 @@ func TestIssueHandler_CreateIssue(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			mockClient := &mockGitHubClient{mockCreateIssue: tt.mockCreate}
-			handler := NewIssueHandler(mockClient, owner, repo)
+			handler := NewIssueHandler(mockClient)
 
-			req, err := http.NewRequest("POST", "/issues", strings.NewReader(tt.reqBody))
+			url := "/repos/" + owner + "/" + repo + "/issues"
+			req, err := http.NewRequest("POST", url, strings.NewReader(tt.reqBody))
 			if err != nil {
 				t.Fatal(err)
 			}
+			req.SetPathValue("owner", owner)
+			req.SetPathValue("repo", repo)
 
 			rr := httptest.NewRecorder()
 
@@ -160,13 +163,16 @@ func TestIssueHandler_DeleteIssue(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockClient := &mockGitHubClient{mockCloseIssue: tt.mockClose}
-			handler := NewIssueHandler(mockClient, owner, repo)
+			handler := NewIssueHandler(mockClient)
 
-			req, err := http.NewRequest("DELETE", "/issues/"+tt.issueID, nil)
+			url := "/repos/" + owner + "/" + repo + "/issues/" + tt.issueID
+			req, err := http.NewRequest("DELETE", url, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 
+			req.SetPathValue("owner", owner)
+			req.SetPathValue("repo", repo)
 			req.SetPathValue("id", tt.issueID)
 
 			rr := httptest.NewRecorder()
@@ -226,12 +232,15 @@ func TestIssueHandler_ListIssues(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockClient := &mockGitHubClient{mockListIssues: tt.mockList}
-			handler := NewIssueHandler(mockClient, owner, repo)
+			handler := NewIssueHandler(mockClient)
 
-			req, err := http.NewRequest("GET", "/issues", nil)
+			url := "/repos/" + owner + "/" + repo + "/issues"
+			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
+			req.SetPathValue("owner", owner)
+			req.SetPathValue("repo", repo)
 			rr := httptest.NewRecorder()
 
 			handler.ListIssues(rr, req)

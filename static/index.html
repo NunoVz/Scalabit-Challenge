@@ -21,6 +21,12 @@
         <h1>Scalabit Challenge API</h1>
 
         <div class="card">
+            <h2>Target Repository</h2>
+            <input type="text" id="repo-owner" placeholder="Owner (e.g., NunoVz)" value="NunoVz">
+            <input type="text" id="repo-name" placeholder="Repository (e.g., Scalabit-Challenge)" value="Scalabit-Challenge">
+        </div>
+
+        <div class="card">
             <h2>1. List Issues</h2>
             <button onclick="listIssues()">Get Issues</button>
             <pre id="list-result">Results will appear here...</pre>
@@ -50,6 +56,12 @@
     </div>
 
     <script>
+        function getBaseURL() {
+            const owner = document.getElementById('repo-owner').value;
+            const repo = document.getElementById('repo-name').value;
+            return `/repos/${owner}/${repo}`;
+        }
+
         async function renderResult(elementId, promise) {
             const el = document.getElementById(elementId);
             el.innerText = "Loading...";
@@ -63,13 +75,13 @@
         }
 
         function listIssues() {
-            renderResult('list-result', fetch('/issues'));
+            renderResult('list-result', fetch(getBaseURL() + '/issues'));
         }
 
         function createIssue() {
             const title = document.getElementById('issue-title').value;
             const body = document.getElementById('issue-body').value;
-            renderResult('create-result', fetch('/issues', {
+            renderResult('create-result', fetch(getBaseURL() + '/issues', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title, body })
@@ -78,12 +90,12 @@
 
         function closeIssue() {
             const id = document.getElementById('issue-id').value;
-            renderResult('close-result', fetch('/issues/' + id, { method: 'DELETE' }));
+            renderResult('close-result', fetch(getBaseURL() + '/issues/' + id, { method: 'DELETE' }));
         }
 
         function checkPR() {
             const id = document.getElementById('pr-id').value;
-            renderResult('pr-result', fetch('/prs/' + id + '/status'));
+            renderResult('pr-result', fetch(getBaseURL() + '/prs/' + id + '/status'));
         }
     </script>
 </body>

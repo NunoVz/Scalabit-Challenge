@@ -66,8 +66,6 @@ jobs:
         run: |
           kubectl create secret generic github-creds \
             --from-literal=GITHUB_TOKEN=${GITHUB_TOKEN} \
-            --from-literal=GITHUB_OWNER='NunoVz' \
-            --from-literal=GITHUB_REPO='Scalabit-Challenge' \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy to Kubernetes

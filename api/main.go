@@ -15,16 +15,14 @@ func main() {
 	//.env
 	_ = godotenv.Load()
 	token := os.Getenv("GITHUB_TOKEN")
-	owner := os.Getenv("GITHUB_OWNER")
-	repo := os.Getenv("GITHUB_REPO")
 
 	// Init Dependencies
 	ghClient, err := github.NewClient(token)
 	if err != nil {
 		log.Fatalf("Error creating GitHub client: %v", err)
 	}
-	issueHandler := handlers.NewIssueHandler(ghClient, owner, repo)
-	prHandler := handlers.NewPRHandler(ghClient, owner, repo)
+	issueHandler := handlers.NewIssueHandler(ghClient)
+	prHandler := handlers.NewPRHandler(ghClient)
 
 	// Endpoints---------------
 	mux := http.NewServeMux()
@@ -33,12 +31,12 @@ func main() {
 	mux.HandleFunc("GET /health", handlers.HealthHandler)
 
 	// Issues endpoints
-	mux.HandleFunc("GET /issues", issueHandler.ListIssues)
-	mux.HandleFunc("POST /issues", issueHandler.CreateIssue)
-	mux.HandleFunc("DELETE /issues/{id}", issueHandler.DeleteIssue)
+	mux.HandleFunc("GET /repos/{owner}/{repo}/issues", issueHandler.ListIssues)
+	mux.HandleFunc("POST /repos/{owner}/{repo}/issues", issueHandler.CreateIssue)
+	mux.HandleFunc("DELETE /repos/{owner}/{repo}/issues/{id}", issueHandler.DeleteIssue)
 
 	// Pull Requests endpoints
-	mux.HandleFunc("GET /prs/{id}/status", prHandler.CheckPRStatus)
+	mux.HandleFunc("GET /repos/{owner}/{repo}/prs/{id}/status", prHandler.CheckPRStatus)
 
 	mux.Handle("/", http.FileServer(http.Dir("./static")))
 
