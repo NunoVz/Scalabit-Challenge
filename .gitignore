@@ -5,3 +5,4 @@
 # IDE specific files
 .vscode/
 .env
+.secrets

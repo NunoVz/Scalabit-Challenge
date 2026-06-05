@@ -31,7 +31,7 @@ jobs:
 
       # 3. SCA 
       - name: Run Trivy vulnerability scanner (SCA)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -47,7 +47,7 @@ jobs:
 
       # 5. IaC Scanning (Infrastructure as Code)
       - name: Run Trivy for IaC (Kubernetes & Dockerfile)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: 'config'
           scan-ref: '.'
@@ -81,10 +81,20 @@ jobs:
       - name: Setup Minikube
         uses: medyagh/setup-minikube@latest
 
-      - name: Build Docker Image
-        run: |
-          eval $(minikube -p minikube docker-env)
-          docker build -t scalabit-challenge-api:latest .
+      - name: Build Docker Image (Local)
+        run: docker build -t scalabit-challenge-api:latest .
+
+      # 6. Container Image Scanning
+      - name: Run Trivy vulnerability scanner (Container Image)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'scalabit-challenge-api:latest'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Load Image into Minikube
+        run: minikube image load scalabit-challenge-api:latest
 
       - name: Create/Update Kubernetes Secret
         env:
@@ -100,3 +110,16 @@ jobs:
       - name: Verify Deployment
         run: |
           kubectl rollout status deployment/scalabit-challenge-api --timeout=90s || (kubectl get pods && kubectl logs -l app=scalabit-challenge-api && exit 1)
+
+      - name: Run Smoke Tests (API Health)
+        run: |
+          echo "Waiting for the service to be accessible..."
+          MINIKUBE_IP=$(minikube ip)
+          echo "Testing route: http://$MINIKUBE_IP:30000/health"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" --retry 5 --retry-delay 5 --retry-connrefused http://$MINIKUBE_IP:30000/health)
+          if [ "$RESPONSE" == "200" ]; then
+            echo "Smoke test passed! API is healthy and accessible externally."
+          else
+            echo "Smoke test failed! HTTP Status: $RESPONSE"
+            exit 1
+          fi
