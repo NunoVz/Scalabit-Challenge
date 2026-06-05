@@ -29,6 +29,32 @@ jobs:
         with:
           args: ./...
 
+      # 3. SCA 
+      - name: Run Trivy vulnerability scanner (SCA)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL'
+
+      # 4. Secret Scanning
+      - name: Secret Scanning (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 5. IaC Scanning (Infrastructure as Code)
+      - name: Run Trivy for IaC (Kubernetes & Dockerfile)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '1' 
+          severity: 'CRITICAL,HIGH'
+
   tests:
     name: Run Unit Tests
     runs-on: ubuntu-latest
