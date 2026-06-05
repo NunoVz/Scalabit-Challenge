@@ -136,8 +136,9 @@ jobs:
         run: |
           echo "Waiting for the service to be accessible..."
           MINIKUBE_IP=$(minikube ip)
-          echo "Testing route: http://$MINIKUBE_IP:30000/health"
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" --retry 5 --retry-delay 5 --retry-connrefused http://$MINIKUBE_IP:30000/health)
+          NODE_PORT=$(kubectl get svc scalabit-challenge-api-svc -o jsonpath='{.spec.ports[0].nodePort}')
+          echo "Testing route: http://$MINIKUBE_IP:$NODE_PORT/health"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" --retry 5 --retry-delay 5 --retry-connrefused http://$MINIKUBE_IP:$NODE_PORT/health)
           if [ "$RESPONSE" == "200" ]; then
             echo "Smoke test passed! API is healthy and accessible externally."
           else
