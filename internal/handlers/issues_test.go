@@ -14,6 +14,7 @@ import (
 type mockGitHubClient struct {
 	mockCreateIssue func(ctx context.Context, owner, repo, title, body string) (*gh.Issue, error)
 	mockListIssues  func(ctx context.Context, owner, repo string) ([]*gh.Issue, error)
+	mockCloseIssue  func(ctx context.Context, owner, repo string, issueNumber int) (*gh.Issue, error)
 }
 
 func (m *mockGitHubClient) ListIssues(ctx context.Context, owner, repo string) ([]*gh.Issue, error) {
@@ -31,6 +32,9 @@ func (m *mockGitHubClient) CreateIssue(ctx context.Context, owner, repo, title, 
 }
 
 func (m *mockGitHubClient) CloseIssue(ctx context.Context, owner, repo string, issueNumber int) (*gh.Issue, error) {
+	if m.mockCloseIssue != nil {
+		return m.mockCloseIssue(ctx, owner, repo, issueNumber)
+	}
 	return nil, nil
 }
 
@@ -103,6 +107,70 @@ func TestIssueHandler_CreateIssue(t *testing.T) {
 				t.Errorf("handler returned wrong status code: got %v want %v", status, tt.expectedStatus)
 			}
 
+			if tt.expectedSubstr != "" && !strings.Contains(rr.Body.String(), tt.expectedSubstr) {
+				t.Errorf("handler returned unexpected body: got %v want substring %v", rr.Body.String(), tt.expectedSubstr)
+			}
+		})
+	}
+}
+
+func TestIssueHandler_DeleteIssue(t *testing.T) {
+	owner := "test-owner"
+	repo := "test-repo"
+
+	tests := []struct {
+		name           string
+		issueID        string // String to simulate numbers and letters
+		mockClose      func(ctx context.Context, owner, repo string, issueNumber int) (*gh.Issue, error)
+		expectedStatus int
+		expectedSubstr string
+	}{
+		{
+			name:    "Success",
+			issueID: "123",
+			mockClose: func(ctx context.Context, owner, repo string, issueNumber int) (*gh.Issue, error) {
+				title := "Closed Issue Title"
+				return &gh.Issue{Title: &title}, nil
+			},
+			expectedStatus: http.StatusOK,
+			expectedSubstr: "Issue 123 successfully closed",
+		},
+		{
+			name:           "Invalid ID Format",
+			issueID:        "abc",
+			mockClose:      nil,
+			expectedStatus: http.StatusBadRequest,
+			expectedSubstr: "Invalid issue ID. Must be a number.",
+		},
+		{
+			name:    "GitHub API Error",
+			issueID: "123",
+			mockClose: func(ctx context.Context, owner, repo string, issueNumber int) (*gh.Issue, error) {
+				return nil, errors.New("simulated close error")
+			},
+			expectedStatus: http.StatusInternalServerError,
+			expectedSubstr: "Error closing issue: simulated close error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := &mockGitHubClient{mockCloseIssue: tt.mockClose}
+			handler := NewIssueHandler(mockClient, owner, repo)
+
+			req, err := http.NewRequest("DELETE", "/issues/"+tt.issueID, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			req.SetPathValue("id", tt.issueID)
+
+			rr := httptest.NewRecorder()
+			handler.DeleteIssue(rr, req)
+
+			if status := rr.Code; status != tt.expectedStatus {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, tt.expectedStatus)
+			}
 			if tt.expectedSubstr != "" && !strings.Contains(rr.Body.String(), tt.expectedSubstr) {
 				t.Errorf("handler returned unexpected body: got %v want substring %v", rr.Body.String(), tt.expectedSubstr)
 			}
