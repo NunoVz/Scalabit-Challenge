@@ -40,12 +40,17 @@ func main() {
 	// Pull Requests endpoints
 	mux.HandleFunc("GET /prs/{id}/status", prHandler.CheckPRStatus)
 
+	mux.Handle("/", http.FileServer(http.Dir("./static")))
+
 	port := ":8080"
 	log.Printf("Server running on port %s", port)
 
 	srv := &http.Server{
 		Addr:              port,
 		Handler:           mux,
+		ReadTimeout:       5 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       120 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
