@@ -40,7 +40,7 @@ func TestIssueHandler_CreateIssue(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		reqBody        string /
+		reqBody        string
 		mockCreate     func(ctx context.Context, owner, repo, title, body string) (*gh.Issue, error)
 		expectedStatus int
 		expectedSubstr string
