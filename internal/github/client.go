@@ -11,6 +11,7 @@ import (
 type Client interface {
 	ListIssues(ctx context.Context, owner, repo string) ([]*gh.Issue, error)
 	CreateIssue(ctx context.Context, owner, repo, title, body string) (*gh.Issue, error)
+	CloseIssue(ctx context.Context, owner, repo string, issueNumber int) (*gh.Issue, error)
 }
 
 type gitHubClient struct {
@@ -49,5 +50,12 @@ func (g *gitHubClient) CreateIssue(ctx context.Context, owner, repo, title, body
 		Body:  &body,
 	}
 	issue, _, err := g.client.Issues.Create(ctx, owner, repo, req)
+	return issue, err
+}
+
+func (g *gitHubClient) CloseIssue(ctx context.Context, owner, repo string, issueNumber int) (*gh.Issue, error) {
+	state := "closed"
+	req := &gh.IssueRequest{State: &state}
+	issue, _, err := g.client.Issues.Edit(ctx, owner, repo, issueNumber, req)
 	return issue, err
 }
