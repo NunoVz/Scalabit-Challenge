@@ -90,6 +90,15 @@ func TestIssueHandler_CreateIssue(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 			expectedSubstr: "Error creating issue: simulated github api error",
 		},
+		{
+			name:    "Repository Not Found (Wrong Owner/Repo)",
+			reqBody: `{"title": "Error Issue", "body": "This should fail at the mock"}`,
+			mockCreate: func(ctx context.Context, o, r, title, body string) (*gh.Issue, error) {
+				return nil, errors.New("404 Not Found")
+			},
+			expectedStatus: http.StatusInternalServerError,
+			expectedSubstr: "Error creating issue: 404 Not Found",
+		},
 	}
 
 	for _, tt := range tests {
@@ -157,6 +166,15 @@ func TestIssueHandler_DeleteIssue(t *testing.T) {
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedSubstr: "Error closing issue: simulated close error",
+		},
+		{
+			name:    "Repository Not Found (Wrong Owner/Repo)",
+			issueID: "123",
+			mockClose: func(ctx context.Context, owner, repo string, issueNumber int) (*gh.Issue, error) {
+				return nil, errors.New("404 Not Found")
+			},
+			expectedStatus: http.StatusInternalServerError,
+			expectedSubstr: "Error closing issue: 404 Not Found",
 		},
 	}
 
@@ -226,6 +244,14 @@ func TestIssueHandler_ListIssues(t *testing.T) {
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedSubstr: "Error listing issues: simulated github list error",
+		},
+		{
+			name: "Repository Not Found (Wrong Owner/Repo)",
+			mockList: func(ctx context.Context, owner, repo string) ([]*gh.Issue, error) {
+				return nil, errors.New("404 Not Found")
+			},
+			expectedStatus: http.StatusInternalServerError,
+			expectedSubstr: "Error listing issues: 404 Not Found",
 		},
 	}
 
