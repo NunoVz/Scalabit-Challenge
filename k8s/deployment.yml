@@ -20,14 +20,9 @@ spec:
           imagePullPolicy: Never # Use Local Image
           ports:
             - containerPort: 8080
-          env:
-            # Empty Variables for Now
-            - name: GITHUB_TOKEN
-              value: ""
-            - name: GITHUB_OWNER
-              value: "NunoVz"
-            - name: GITHUB_REPO
-              value: "Scalabit-Challenge"
+          envFrom:
+            - secretRef:
+                name: github-creds
           readinessProbe:
             httpGet:
               path: /health

@@ -1,16 +1,21 @@
 name: CD - Deploy to Minikube
 
 on:
-  push:
-    branches: [ develop, main ]
+  workflow_run:
+    workflows: ["CI - PR Validation"] 
+    types:
+      - completed 
 
 jobs:
   deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Build & Deploy to Minikube
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout correct code from PR
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup Minikube
         uses: medyagh/setup-minikube@latest
@@ -20,12 +25,19 @@ jobs:
           eval $(minikube -p minikube docker-env)
           docker build -t scalabit-challenge-api:latest .
 
-      - name: Deploy to Kubernetes
+      - name: Create/Update Kubernetes Secret
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          kubectl apply -f k8s/deployment.yml
-          kubectl apply -f k8s/service.yml
+          kubectl create secret generic github-creds \
+            --from-literal=GITHUB_TOKEN=${GITHUB_TOKEN} \
+            --from-literal=GITHUB_OWNER='NunoVz' \
+            --from-literal=GITHUB_REPO='Scalabit-Challenge' \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy to Kubernetes
+        run: kubectl apply -f k8s/
 
       - name: Verify Deployment
         run: |
-          # Wait for Heath Check
           kubectl rollout status deployment/scalabit-challenge-api --timeout=90s || (kubectl get pods && kubectl logs -l app=scalabit-challenge-api && exit 1)
