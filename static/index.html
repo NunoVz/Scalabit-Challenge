@@ -67,10 +67,17 @@
             el.innerText = "Loading...";
             try {
                 const res = await promise;
+                
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    el.innerText = `Error (${res.status}): ${errorText.trim()}`;
+                    return;
+                }
+
                 const data = await res.json();
                 el.innerText = JSON.stringify(data, null, 2);
             } catch (err) {
-                el.innerText = "Error: " + err;
+                el.innerText = "Error: " + err.message;
             }
         }
 
