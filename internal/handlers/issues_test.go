@@ -15,6 +15,7 @@ type mockGitHubClient struct {
 	mockCreateIssue func(ctx context.Context, owner, repo, title, body string) (*gh.Issue, error)
 	mockListIssues  func(ctx context.Context, owner, repo string) ([]*gh.Issue, error)
 	mockCloseIssue  func(ctx context.Context, owner, repo string, issueNumber int) (*gh.Issue, error)
+	mockGetPRStatus func(ctx context.Context, owner, repo string, prNumber int) (string, error)
 }
 
 func (m *mockGitHubClient) ListIssues(ctx context.Context, owner, repo string) ([]*gh.Issue, error) {
@@ -39,6 +40,9 @@ func (m *mockGitHubClient) CloseIssue(ctx context.Context, owner, repo string, i
 }
 
 func (m *mockGitHubClient) GetPRStatus(ctx context.Context, owner, repo string, prNumber int) (string, error) {
+	if m.mockGetPRStatus != nil {
+		return m.mockGetPRStatus(ctx, owner, repo, prNumber)
+	}
 	return "", nil
 }
 
