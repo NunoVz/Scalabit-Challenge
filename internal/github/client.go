@@ -10,6 +10,7 @@ import (
 // Client establish Git Contact
 type Client interface {
 	ListIssues(ctx context.Context, owner, repo string) ([]*gh.Issue, error)
+	CreateIssue(ctx context.Context, owner, repo, title, body string) (*gh.Issue, error)
 }
 
 type gitHubClient struct {
@@ -40,4 +41,13 @@ func (g *gitHubClient) ListIssues(ctx context.Context, owner, repo string) ([]*g
 	opts := &gh.IssueListByRepoOptions{State: "all"}
 	issues, _, err := g.client.Issues.ListByRepo(ctx, owner, repo, opts)
 	return issues, err
+}
+
+func (g *gitHubClient) CreateIssue(ctx context.Context, owner, repo, title, body string) (*gh.Issue, error) {
+	req := &gh.IssueRequest{
+		Title: &title,
+		Body:  &body,
+	}
+	issue, _, err := g.client.Issues.Create(ctx, owner, repo, req)
+	return issue, err
 }
