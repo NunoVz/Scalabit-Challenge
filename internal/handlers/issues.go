@@ -37,7 +37,17 @@ func (h *IssueHandler) ListIssues(w http.ResponseWriter, r *http.Request) {
 	owner := r.PathValue("owner")
 	repo := r.PathValue("repo")
 
-	issues, err := h.client.ListIssues(r.Context(), owner, repo)
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page <= 0 {
+		page = 1
+	}
+
+	perPage, _ := strconv.Atoi(r.URL.Query().Get("per_page"))
+	if perPage <= 0 {
+		perPage = 30
+	}
+
+	issues, err := h.client.ListIssues(r.Context(), owner, repo, page, perPage)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error listing issues: %v", err), http.StatusInternalServerError)
 		return

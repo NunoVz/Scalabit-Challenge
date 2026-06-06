@@ -149,7 +149,7 @@ func TestListIssues(t *testing.T) {
 	server, client := setupMockClient(mux)
 	defer server.Close()
 
-	issues, err := client.ListIssues(context.Background(), "test-owner", "test-repo")
+	issues, err := client.ListIssues(context.Background(), "test-owner", "test-repo", 1, 30)
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
