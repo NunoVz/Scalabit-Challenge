@@ -13,14 +13,14 @@ import (
 
 type mockGitHubClient struct {
 	mockCreateIssue func(ctx context.Context, owner, repo, title, body string) (*gh.Issue, error)
-	mockListIssues  func(ctx context.Context, owner, repo string) ([]*gh.Issue, error)
+	mockListIssues  func(ctx context.Context, owner, repo string, page, perPage int) ([]*gh.Issue, error)
 	mockCloseIssue  func(ctx context.Context, owner, repo string, issueNumber int) (*gh.Issue, error)
 	mockGetPRStatus func(ctx context.Context, owner, repo string, prNumber int) (string, error)
 }
 
-func (m *mockGitHubClient) ListIssues(ctx context.Context, owner, repo string) ([]*gh.Issue, error) {
+func (m *mockGitHubClient) ListIssues(ctx context.Context, owner, repo string, page, perPage int) ([]*gh.Issue, error) {
 	if m.mockListIssues != nil {
-		return m.mockListIssues(ctx, owner, repo)
+		return m.mockListIssues(ctx, owner, repo, page, perPage)
 	}
 	return nil, nil
 }
@@ -212,13 +212,13 @@ func TestIssueHandler_ListIssues(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		mockList       func(ctx context.Context, owner, repo string) ([]*gh.Issue, error)
+		mockList       func(ctx context.Context, owner, repo string, page, perPage int) ([]*gh.Issue, error)
 		expectedStatus int
 		expectedSubstr string
 	}{
 		{
 			name: "Success",
-			mockList: func(ctx context.Context, owner, repo string) ([]*gh.Issue, error) {
+			mockList: func(ctx context.Context, owner, repo string, page, perPage int) ([]*gh.Issue, error) {
 				id1, id2 := int64(1), int64(2)
 				title1, title2 := "First Issue", "Second Issue"
 				return []*gh.Issue{
@@ -231,7 +231,7 @@ func TestIssueHandler_ListIssues(t *testing.T) {
 		},
 		{
 			name: "Success - No Issues",
-			mockList: func(ctx context.Context, owner, repo string) ([]*gh.Issue, error) {
+			mockList: func(ctx context.Context, owner, repo string, page, perPage int) ([]*gh.Issue, error) {
 				return []*gh.Issue{}, nil
 			},
 			expectedStatus: http.StatusOK,
@@ -239,7 +239,7 @@ func TestIssueHandler_ListIssues(t *testing.T) {
 		},
 		{
 			name: "GitHub API Error",
-			mockList: func(ctx context.Context, owner, repo string) ([]*gh.Issue, error) {
+			mockList: func(ctx context.Context, owner, repo string, page, perPage int) ([]*gh.Issue, error) {
 				return nil, errors.New("simulated github list error")
 			},
 			expectedStatus: http.StatusInternalServerError,
@@ -247,7 +247,7 @@ func TestIssueHandler_ListIssues(t *testing.T) {
 		},
 		{
 			name: "Repository Not Found (Wrong Owner/Repo)",
-			mockList: func(ctx context.Context, owner, repo string) ([]*gh.Issue, error) {
+			mockList: func(ctx context.Context, owner, repo string, page, perPage int) ([]*gh.Issue, error) {
 				return nil, errors.New("404 Not Found")
 			},
 			expectedStatus: http.StatusInternalServerError,

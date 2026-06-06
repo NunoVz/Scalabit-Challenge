@@ -4,34 +4,51 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
-  lint-and-sec:
-    name: Lint & Security Check
+  lint:
+    name: Code Linting
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.26.x'
 
-      # 1. Linter Go
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.12.2
 
-      # 2. SAST
+  sast:
+    name: SAST (gosec)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+
       - name: Run gosec
         uses: securego/gosec@master
         with:
           args: ./...
 
-      # 3. SCA 
+  sca:
+    name: SCA (Trivy Dependencies)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Run Trivy vulnerability scanner (SCA)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -41,13 +58,27 @@ jobs:
           exit-code: '1'
           severity: 'CRITICAL,HIGH'
 
-      # 4. Secret Scanning
+  secrets:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Secret Scanning (Gitleaks)
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 5. IaC Scanning (Infrastructure as Code)
+  iac:
+    name: IaC Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Run Trivy for IaC (Kubernetes & Dockerfile)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -75,8 +106,8 @@ jobs:
         run: |
           go test -v -race -coverprofile=coverage.raw.out ./...
           
-          # Exclude entrypoint and third-party wrappers
-          grep -v -E '/api/main.go|/internal/github/client.go' coverage.raw.out > coverage.out
+          # Exclude entrypoint
+          grep -v -E '/api/main.go' coverage.raw.out > coverage.out
 
           # Check if coverage went bellow 80%
           TOTAL_COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
@@ -91,21 +122,17 @@ jobs:
             echo "Coverage $TOTAL_COVERAGE% is acceptable."
           fi
 
-  deploy:
-    name: Build & Deploy to Minikube
-    needs: [lint-and-sec, tests]
+  build-image:
+    name: Build & Scan Container Image
+    needs: [lint, sast, sca, secrets, iac, tests]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Minikube
-        uses: medyagh/setup-minikube@latest
-
-      - name: Build Docker Image (Local)
+      - name: Build Docker Image
         run: docker build -t scalabit-challenge-api:latest .
 
-      # 6. Container Image Scanning
       - name: Run Trivy vulnerability scanner (Container Image)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -113,6 +140,35 @@ jobs:
           format: 'table'
           exit-code: '1'
           severity: 'CRITICAL,HIGH'
+
+      - name: Save Docker Image
+        run: docker save scalabit-challenge-api:latest -o scalabit-api.tar
+
+      - name: Upload Docker Image Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: scalabit-api.tar
+          retention-days: 1
+
+  deploy:
+    name: Deploy to Minikube & Smoke Test
+    needs: [build-image]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker Image Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker Image
+        run: docker load -i scalabit-api.tar
+
+      - name: Setup Minikube
+        uses: medyagh/setup-minikube@latest
 
       - name: Load Image into Minikube
         run: minikube image load scalabit-challenge-api:latest

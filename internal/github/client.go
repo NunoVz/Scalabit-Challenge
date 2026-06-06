@@ -9,7 +9,7 @@ import (
 
 // Client establish Git Contact
 type Client interface {
-	ListIssues(ctx context.Context, owner, repo string) ([]*gh.Issue, error)
+	ListIssues(ctx context.Context, owner, repo string, page, perPage int) ([]*gh.Issue, error)
 	CreateIssue(ctx context.Context, owner, repo, title, body string) (*gh.Issue, error)
 	CloseIssue(ctx context.Context, owner, repo string, issueNumber int) (*gh.Issue, error)
 	GetPRStatus(ctx context.Context, owner, repo string, prNumber int) (string, error)
@@ -39,8 +39,14 @@ func NewClient(token string) (Client, error) {
 	return &gitHubClient{client: client}, nil
 }
 
-func (g *gitHubClient) ListIssues(ctx context.Context, owner, repo string) ([]*gh.Issue, error) {
-	opts := &gh.IssueListByRepoOptions{State: "all"}
+func (g *gitHubClient) ListIssues(ctx context.Context, owner, repo string, page, perPage int) ([]*gh.Issue, error) {
+	opts := &gh.IssueListByRepoOptions{
+		State: "all",
+		ListOptions: gh.ListOptions{
+			Page:    page,
+			PerPage: perPage,
+		},
+	}
 	issues, _, err := g.client.Issues.ListByRepo(ctx, owner, repo, opts)
 	return issues, err
 }
@@ -86,7 +92,7 @@ func (g *gitHubClient) GetPRStatus(ctx context.Context, owner, repo string, prNu
 		if run.GetStatus() != "completed" {
 			status = "pending"
 		} else if run.GetConclusion() == "failure" || run.GetConclusion() == "cancelled" || run.GetConclusion() == "timed_out" {
-			return "failure", nil 
+			return "failure", nil
 		}
 	}
 
