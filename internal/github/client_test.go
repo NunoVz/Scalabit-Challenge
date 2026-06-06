@@ -32,14 +32,14 @@ func TestGetPRStatus(t *testing.T) {
 			name: "Success",
 			mockPR: func(w http.ResponseWriter, r *http.Request) {
 				pr := gh.PullRequest{Head: &gh.PullRequestBranch{SHA: gh.Ptr("mock-sha")}}
-				json.NewEncoder(w).Encode(pr)
+				_ = json.NewEncoder(w).Encode(pr)
 			},
 			mockChecks: func(w http.ResponseWriter, r *http.Request) {
 				checks := gh.ListCheckRunsResults{
 					Total:     gh.Ptr(1),
 					CheckRuns: []*gh.CheckRun{{Status: gh.Ptr("completed"), Conclusion: gh.Ptr("success")}},
 				}
-				json.NewEncoder(w).Encode(checks)
+				_ = json.NewEncoder(w).Encode(checks)
 			},
 			expectedStatus: "success",
 			expectError:    false,
@@ -55,7 +55,8 @@ func TestGetPRStatus(t *testing.T) {
 			name: "Error Checks",
 			mockPR: func(w http.ResponseWriter, r *http.Request) {
 				pr := gh.PullRequest{Head: &gh.PullRequestBranch{SHA: gh.Ptr("mock-sha")}}
-				json.NewEncoder(w).Encode(pr)
+				_ = json.NewEncoder(w).Encode(pr)
+				_ = json.NewEncoder(w).Encode(pr)
 			},
 			mockChecks: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
@@ -70,7 +71,7 @@ func TestGetPRStatus(t *testing.T) {
 			},
 			mockChecks: func(w http.ResponseWriter, r *http.Request) {
 				checks := gh.ListCheckRunsResults{Total: gh.Ptr(0)}
-				json.NewEncoder(w).Encode(checks)
+				_ = json.NewEncoder(w).Encode(checks)
 			},
 			expectedStatus: "no_checks_found",
 		},
@@ -78,14 +79,14 @@ func TestGetPRStatus(t *testing.T) {
 			name: "Pending",
 			mockPR: func(w http.ResponseWriter, r *http.Request) {
 				pr := gh.PullRequest{Head: &gh.PullRequestBranch{SHA: gh.Ptr("mock-sha")}}
-				json.NewEncoder(w).Encode(pr)
+				_ = json.NewEncoder(w).Encode(pr)
 			},
 			mockChecks: func(w http.ResponseWriter, r *http.Request) {
 				checks := gh.ListCheckRunsResults{
 					Total:     gh.Ptr(1),
 					CheckRuns: []*gh.CheckRun{{Status: gh.Ptr("in_progress")}},
 				}
-				json.NewEncoder(w).Encode(checks)
+				_ = json.NewEncoder(w).Encode(checks)
 			},
 			expectedStatus: "pending",
 		},
@@ -93,14 +94,14 @@ func TestGetPRStatus(t *testing.T) {
 			name: "Failure",
 			mockPR: func(w http.ResponseWriter, r *http.Request) {
 				pr := gh.PullRequest{Head: &gh.PullRequestBranch{SHA: gh.Ptr("mock-sha")}}
-				json.NewEncoder(w).Encode(pr)
+				_ = json.NewEncoder(w).Encode(pr)
 			},
 			mockChecks: func(w http.ResponseWriter, r *http.Request) {
 				checks := gh.ListCheckRunsResults{
 					Total:     gh.Ptr(1),
 					CheckRuns: []*gh.CheckRun{{Status: gh.Ptr("completed"), Conclusion: gh.Ptr("failure")}},
 				}
-				json.NewEncoder(w).Encode(checks)
+				_ = json.NewEncoder(w).Encode(checks)
 			},
 			expectedStatus: "failure",
 		},
@@ -143,7 +144,7 @@ func TestListIssues(t *testing.T) {
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(issues)
+		_ = json.NewEncoder(w).Encode(issues)
 	})
 
 	server, client := setupMockClient(mux)
@@ -186,7 +187,7 @@ func TestCreateIssue(t *testing.T) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(issue)
+		_ = json.NewEncoder(w).Encode(issue)
 	})
 
 	server, client := setupMockClient(mux)
@@ -211,7 +212,7 @@ func TestCloseIssue(t *testing.T) {
 			State:  gh.Ptr("closed"),
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(issue)
+		_ = json.NewEncoder(w).Encode(issue)
 	})
 
 	server, client := setupMockClient(mux)

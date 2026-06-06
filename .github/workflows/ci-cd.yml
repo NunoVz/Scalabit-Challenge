@@ -5,33 +5,47 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  lint-and-sec:
-    name: Lint & Security Check
+  lint:
+    name: Code Linting
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.26.x'
 
-      # 1. Linter Go
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.12.2
 
-      # 2. SAST
+  sast:
+    name: SAST (gosec)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+
       - name: Run gosec
         uses: securego/gosec@master
         with:
           args: ./...
 
-      # 3. SCA 
+  sca:
+    name: SCA (Trivy Dependencies)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Run Trivy vulnerability scanner (SCA)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -41,13 +55,27 @@ jobs:
           exit-code: '1'
           severity: 'CRITICAL,HIGH'
 
-      # 4. Secret Scanning
+  secrets:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Secret Scanning (Gitleaks)
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 5. IaC Scanning (Infrastructure as Code)
+  iac:
+    name: IaC Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Run Trivy for IaC (Kubernetes & Dockerfile)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -93,7 +121,7 @@ jobs:
 
   deploy:
     name: Build & Deploy to Minikube
-    needs: [lint-and-sec, tests]
+    needs: [lint, sast, sca, secrets, iac, tests]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
