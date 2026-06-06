@@ -67,7 +67,7 @@ func TestGetPRStatus(t *testing.T) {
 			name: "No Checks Found",
 			mockPR: func(w http.ResponseWriter, r *http.Request) {
 				pr := gh.PullRequest{Head: &gh.PullRequestBranch{SHA: gh.Ptr("mock-sha")}}
-				json.NewEncoder(w).Encode(pr)
+				_ = json.NewEncoder(w).Encode(pr)
 			},
 			mockChecks: func(w http.ResponseWriter, r *http.Request) {
 				checks := gh.ListCheckRunsResults{Total: gh.Ptr(0)}
