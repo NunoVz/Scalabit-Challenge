@@ -122,21 +122,17 @@ jobs:
             echo "Coverage $TOTAL_COVERAGE% is acceptable."
           fi
 
-  deploy:
-    name: Build & Deploy to Minikube
+  build-image:
+    name: Build & Scan Container Image
     needs: [lint, sast, sca, secrets, iac, tests]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Minikube
-        uses: medyagh/setup-minikube@latest
-
-      - name: Build Docker Image (Local)
+      - name: Build Docker Image
         run: docker build -t scalabit-challenge-api:latest .
 
-      # 6. Container Image Scanning
       - name: Run Trivy vulnerability scanner (Container Image)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -144,6 +140,35 @@ jobs:
           format: 'table'
           exit-code: '1'
           severity: 'CRITICAL,HIGH'
+
+      - name: Save Docker Image
+        run: docker save scalabit-challenge-api:latest -o scalabit-api.tar
+
+      - name: Upload Docker Image Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: scalabit-api.tar
+          retention-days: 1
+
+  deploy:
+    name: Deploy to Minikube & Smoke Test
+    needs: [build-image]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker Image Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker Image
+        run: docker load -i scalabit-api.tar
+
+      - name: Setup Minikube
+        uses: medyagh/setup-minikube@latest
 
       - name: Load Image into Minikube
         run: minikube image load scalabit-challenge-api:latest
