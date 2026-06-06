@@ -75,8 +75,8 @@ jobs:
         run: |
           go test -v -race -coverprofile=coverage.raw.out ./...
           
-          # Exclude entrypoint and third-party wrappers
-          grep -v -E '/api/main.go|/internal/github/client.go' coverage.raw.out > coverage.out
+          # Exclude entrypoint
+          grep -v -E '/api/main.go' coverage.raw.out > coverage.out
 
           # Check if coverage went bellow 80%
           TOTAL_COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
