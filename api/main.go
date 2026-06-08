@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,6 +14,33 @@ import (
 	"github.com/joho/godotenv"
 )
 
+func init() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+}
+
+func secureHeadersMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+		next.ServeHTTP(w, r)
+	})
+}
+
+func auditLogMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		next.ServeHTTP(w, r)
+		slog.Info("Request handled",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"duration", time.Since(start).String(),
+			"client_ip", r.RemoteAddr,
+		)
+	})
+}
+
 func main() {
 	//.env
 	_ = godotenv.Load()
@@ -22,7 +49,8 @@ func main() {
 	// Init Dependencies
 	ghClient, err := github.NewClient(token)
 	if err != nil {
-		log.Fatalf("Error creating GitHub client: %v", err)
+		slog.Error("Error creating GitHub client", "error", err)
+		os.Exit(1)
 	}
 	issueHandler := handlers.NewIssueHandler(ghClient)
 	prHandler := handlers.NewPRHandler(ghClient)
@@ -44,11 +72,11 @@ func main() {
 	mux.Handle("/", http.FileServer(http.Dir("./static")))
 
 	port := ":8080"
-	log.Printf("Server running on port %s", port)
+	slog.Info("Server starting", "port", port)
 
 	srv := &http.Server{
 		Addr:              port,
-		Handler:           mux,
+		Handler:           auditLogMiddleware(secureHeadersMiddleware(mux)),
 		ReadTimeout:       5 * time.Second,
 		WriteTimeout:      10 * time.Second,
 		IdleTimeout:       120 * time.Second,
@@ -57,7 +85,8 @@ func main() {
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Error starting server: %v", err)
+			slog.Error("Error starting server", "error", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -65,12 +94,13 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("Shutting down server...")
+	slog.Info("Shutting down server...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		slog.Error("Server forced to shutdown", "error", err)
+		os.Exit(1)
 	}
-	log.Println("Server exiting cleanly")
+	slog.Info("Server exiting cleanly")
 }

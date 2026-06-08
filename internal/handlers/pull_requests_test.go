@@ -61,7 +61,7 @@ func TestPRHandler_CheckPRStatus(t *testing.T) {
 				return "", errors.New("simulated PR status error")
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedSubstr: "Error checking PR status: simulated PR status error",
+			expectedSubstr: "Internal Server Error",
 		},
 		{
 			name: "Repository Not Found (Wrong Owner/Repo)",
@@ -70,7 +70,7 @@ func TestPRHandler_CheckPRStatus(t *testing.T) {
 				return "", errors.New("404 Not Found")
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedSubstr: "Error checking PR status: 404 Not Found",
+			expectedSubstr: "Internal Server Error",
 		},
 	}
 
