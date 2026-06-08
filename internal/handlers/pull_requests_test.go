@@ -69,8 +69,8 @@ func TestPRHandler_CheckPRStatus(t *testing.T) {
 			mockGetStatus: func(ctx context.Context, owner, repo string, prNumber int) (string, error) {
 				return "", errors.New("404 Not Found")
 			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedSubstr: "Internal Server Error",
+			expectedStatus: http.StatusNotFound,
+			expectedSubstr: "Repository, Owner, or PR not found",
 		},
 	}
 

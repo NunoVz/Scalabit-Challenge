@@ -104,6 +104,7 @@ This project focuses on the **Shift-Left Security** approach, catching vulnerabi
 - **Secret Scanning:** Uses `Gitleaks` to perform a full-depth Git history scan, ensuring no API keys or tokens were accidentally committed.
 - **IaC Scanning:** Uses `Trivy` (`config` mode) to scan the `Dockerfile` and Kubernetes YAMLs (`k8s/`) for misconfigurations (e.g., missing resource limits, root user execution).
 - **Container Image Scanning:** After the Docker image is built locally, `Trivy` scans the final image for OS-level vulnerabilities (Alpine base image) before allowing it into the cluster.
+- **SBOM Generation:** Automatically generates a Software Bill of Materials (SPDX-JSON) for the container image and uploads it as a GitHub Actions artifact for compliance and auditing.
 
 ### 3. Kubernetes Hardening & Security Context
 The deployment to Minikube adheres to the following security contexts:

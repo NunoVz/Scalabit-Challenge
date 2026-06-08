@@ -96,8 +96,8 @@ func TestIssueHandler_CreateIssue(t *testing.T) {
 			mockCreate: func(ctx context.Context, o, r, title, body string) (*gh.Issue, error) {
 				return nil, errors.New("404 Not Found")
 			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedSubstr: "Internal Server Error",
+			expectedStatus: http.StatusNotFound,
+			expectedSubstr: "Repository or Owner not found",
 		},
 	}
 
@@ -173,8 +173,8 @@ func TestIssueHandler_DeleteIssue(t *testing.T) {
 			mockClose: func(ctx context.Context, owner, repo string, issueNumber int) (*gh.Issue, error) {
 				return nil, errors.New("404 Not Found")
 			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedSubstr: "Internal Server Error",
+			expectedStatus: http.StatusNotFound,
+			expectedSubstr: "Repository, Owner, or Issue not found",
 		},
 	}
 
@@ -250,8 +250,8 @@ func TestIssueHandler_ListIssues(t *testing.T) {
 			mockList: func(ctx context.Context, owner, repo string, page, perPage int) ([]*gh.Issue, error) {
 				return nil, errors.New("404 Not Found")
 			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedSubstr: "Internal Server Error",
+			expectedStatus: http.StatusNotFound,
+			expectedSubstr: "Repository or Owner not found",
 		},
 	}
 
