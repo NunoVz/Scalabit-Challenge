@@ -1,0 +1,212 @@
+name: CI/CD - PR Validation
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  lint:
+    name: Code Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12.2
+
+  sast:
+    name: SAST (gosec)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+
+      - name: Run gosec
+        uses: securego/gosec@master
+        with:
+          args: ./...
+
+  sca:
+    name: SCA (Trivy Dependencies)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner (SCA)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+
+  secrets:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret Scanning (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  iac:
+    name: IaC Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy for IaC (Kubernetes & Dockerfile)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '1' 
+          severity: 'CRITICAL,HIGH'
+
+  tests:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+
+      - name: Run Tests & Check Coverage
+        run: |
+          go test -v -race -coverprofile=coverage.raw.out ./...
+          
+          # Exclude entrypoint
+          grep -v -E '/api/main.go' coverage.raw.out > coverage.out
+
+          # Check if coverage went bellow 80%
+          TOTAL_COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
+          echo "Total Test Coverage: $TOTAL_COVERAGE%"
+          
+          # Remove decimal part for comparison
+          TOTAL_COVERAGE_INT=${TOTAL_COVERAGE%.*}
+          if [ "$TOTAL_COVERAGE_INT" -lt 80 ]; then
+            echo "Coverage $TOTAL_COVERAGE% is below threshold of 80%"
+            exit 1
+          else
+            echo "Coverage $TOTAL_COVERAGE% is acceptable."
+          fi
+
+  build-image:
+    name: Build & Scan Container Image
+    needs: [lint, sast, sca, secrets, iac, tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: docker build -t scalabit-challenge-api:latest .
+
+      - name: Run Trivy vulnerability scanner (Container Image)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: 'scalabit-challenge-api:latest'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Generate SBOM (Software Bill of Materials)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: 'scalabit-challenge-api:latest'
+          format: 'spdx-json'
+          output: 'sbom.spdx.json'
+
+      - name: Save Docker Image
+        run: docker save scalabit-challenge-api:latest -o scalabit-api.tar
+
+      - name: Upload Docker Image Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            scalabit-api.tar
+            sbom.spdx.json
+          retention-days: 1
+
+  deploy:
+    name: Deploy to Minikube & Smoke Test
+    needs: [build-image]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Docker Image Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Load Docker Image
+        run: docker load -i scalabit-api.tar
+
+      - name: Setup Minikube
+        uses: medyagh/setup-minikube@latest
+
+      - name: Load Image into Minikube
+        run: minikube image load scalabit-challenge-api:latest
+
+      - name: Create/Update Kubernetes Secret
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          kubectl create secret generic github-creds \
+            --from-literal=GITHUB_TOKEN=${GITHUB_TOKEN} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy to Kubernetes
+        run: kubectl apply -f k8s/
+
+      - name: Verify Deployment
+        run: |
+          kubectl rollout status deployment/scalabit-challenge-api --timeout=90s || (kubectl get pods && kubectl logs -l app=scalabit-challenge-api && exit 1)
+
+      - name: Run Smoke Tests (API Health)
+        run: |
+          echo "Waiting for the service to be accessible..."
+          MINIKUBE_IP=$(minikube ip)
+          NODE_PORT=$(kubectl get svc scalabit-challenge-api-svc -o jsonpath='{.spec.ports[0].nodePort}')
+          echo "Testing route: http://$MINIKUBE_IP:$NODE_PORT/health"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" --retry 5 --retry-delay 5 --retry-connrefused http://$MINIKUBE_IP:$NODE_PORT/health)
+          if [ "$RESPONSE" == "200" ]; then
+            echo "Smoke test passed! API is healthy and accessible externally."
+          else
+            echo "Smoke test failed! HTTP Status: $RESPONSE"
+            exit 1
+          fi

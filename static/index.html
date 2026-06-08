@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scalabit API Interface</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 { text-align: center; color: #2c3e50; }
+        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .card h2 { margin-top: 0; color: #2980b9; font-size: 1.2rem; }
+        input, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        button { background-color: #3498db; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.3s; }
+        button:hover { background-color: #2980b9; }
+        pre { background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 4px; overflow-x: auto; font-size: 0.9rem; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Scalabit Challenge API</h1>
+
+        <div class="card">
+            <h2>Target Repository</h2>
+            <input type="text" id="repo-owner" placeholder="Owner (e.g., NunoVz)" value="NunoVz">
+            <input type="text" id="repo-name" placeholder="Repository (e.g., Scalabit-Challenge)" value="Scalabit-Challenge">
+        </div>
+
+        <div class="card">
+            <h2>1. List Issues</h2>
+            <div style="display: flex; gap: 10px;">
+                <input type="number" id="page-number" placeholder="Page (e.g., 1)" value="1">
+                <input type="number" id="per-page" placeholder="Per Page (e.g., 30)" value="30">
+            </div>
+            <button onclick="listIssues()">Get Issues</button>
+            <pre id="list-result">Results will appear here...</pre>
+        </div>
+
+        <div class="card">
+            <h2>2. Create Issue</h2>
+            <input type="text" id="issue-title" placeholder="Issue Title (required)">
+            <textarea id="issue-body" rows="3" placeholder="Issue Description"></textarea>
+            <button onclick="createIssue()">Create Issue</button>
+            <pre id="create-result">Results will appear here...</pre>
+        </div>
+
+        <div class="card">
+            <h2>3. Close Issue</h2>
+            <input type="number" id="issue-id" placeholder="Issue ID (e.g., 1)">
+            <button style="background-color: #e74c3c;" onclick="closeIssue()">Close Issue</button>
+            <pre id="close-result">Results will appear here...</pre>
+        </div>
+
+        <div class="card">
+            <h2>4. Check PR Status</h2>
+            <input type="number" id="pr-id" placeholder="Pull Request Number (e.g., 1)">
+            <button style="background-color: #2ecc71;" onclick="checkPR()">Check Status</button>
+            <pre id="pr-result">Results will appear here...</pre>
+        </div>
+    </div>
+
+    <script>
+        function getBaseURL() {
+            const owner = document.getElementById('repo-owner').value;
+            const repo = document.getElementById('repo-name').value;
+            return `/repos/${owner}/${repo}`;
+        }
+
+        async function renderResult(elementId, promise) {
+            const el = document.getElementById(elementId);
+            el.innerText = "Loading...";
+            try {
+                const res = await promise;
+                
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    el.innerText = `Error (${res.status}): ${errorText.trim()}`;
+                    return;
+                }
+
+                const data = await res.json();
+                el.innerText = JSON.stringify(data, null, 2);
+            } catch (err) {
+                el.innerText = "Error: " + err.message;
+            }
+        }
+
+        function listIssues() {
+            const page = document.getElementById('page-number').value || 1;
+            const perPage = document.getElementById('per-page').value || 30;
+            renderResult('list-result', fetch(getBaseURL() + `/issues?page=${page}&per_page=${perPage}`));
+        }
+
+        function createIssue() {
+            const title = document.getElementById('issue-title').value;
+            const body = document.getElementById('issue-body').value;
+            renderResult('create-result', fetch(getBaseURL() + '/issues', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, body })
+            }));
+        }
+
+        function closeIssue() {
+            const id = document.getElementById('issue-id').value;
+            renderResult('close-result', fetch(getBaseURL() + '/issues/' + id, { method: 'DELETE' }));
+        }
+
+        function checkPR() {
+            const id = document.getElementById('pr-id').value;
+            renderResult('pr-result', fetch(getBaseURL() + '/prs/' + id + '/status'));
+        }
+    </script>
+</body>
+</html>

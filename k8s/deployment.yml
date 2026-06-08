@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scalabit-challenge-api
+  labels:
+    app: scalabit-challenge-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scalabit-challenge-api
+  template:
+    metadata:
+      labels:
+        app: scalabit-challenge-api
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+      containers:
+        - name: api
+          image: scalabit-challenge-api:latest
+          imagePullPolicy: Never # Use Local Image
+          #Trivy suggested this
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          envFrom:
+            - secretRef:
+                name: github-creds
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
