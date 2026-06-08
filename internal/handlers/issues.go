@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/NunoVz/Scalabit-Challenge/internal/github"
 )
@@ -49,7 +50,12 @@ func (h *IssueHandler) ListIssues(w http.ResponseWriter, r *http.Request) {
 
 	issues, err := h.client.ListIssues(r.Context(), owner, repo, page, perPage)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error listing issues: %v", err), http.StatusInternalServerError)
+		if strings.Contains(err.Error(), "404") {
+			http.Error(w, "Repository or Owner not found", http.StatusNotFound)
+			return
+		}
+		slog.Error("Error listing issues", "error", err, "owner", owner, "repo", repo)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -73,7 +79,12 @@ func (h *IssueHandler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 
 	issue, err := h.client.CreateIssue(r.Context(), owner, repo, req.Title, req.Body)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error creating issue: %v", err), http.StatusInternalServerError)
+		if strings.Contains(err.Error(), "404") {
+			http.Error(w, "Repository or Owner not found", http.StatusNotFound)
+			return
+		}
+		slog.Error("Error creating issue", "error", err, "owner", owner, "repo", repo)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -93,7 +104,12 @@ func (h *IssueHandler) DeleteIssue(w http.ResponseWriter, r *http.Request) {
 
 	issue, err := h.client.CloseIssue(r.Context(), owner, repo, issueNumber)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error closing issue: %v", err), http.StatusInternalServerError)
+		if strings.Contains(err.Error(), "404") {
+			http.Error(w, "Repository, Owner, or Issue not found", http.StatusNotFound)
+			return
+		}
+		slog.Error("Error closing issue", "error", err, "owner", owner, "repo", repo, "issue_id", issueNumber)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -108,6 +124,6 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		log.Printf("Error encoding response: %v", err)
+		slog.Error("Error encoding response", "error", err)
 	}
 }

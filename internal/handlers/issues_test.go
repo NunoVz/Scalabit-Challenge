@@ -88,7 +88,7 @@ func TestIssueHandler_CreateIssue(t *testing.T) {
 				return nil, errors.New("simulated github api error")
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedSubstr: "Error creating issue: simulated github api error",
+			expectedSubstr: "Internal Server Error",
 		},
 		{
 			name:    "Repository Not Found (Wrong Owner/Repo)",
@@ -96,8 +96,8 @@ func TestIssueHandler_CreateIssue(t *testing.T) {
 			mockCreate: func(ctx context.Context, o, r, title, body string) (*gh.Issue, error) {
 				return nil, errors.New("404 Not Found")
 			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedSubstr: "Error creating issue: 404 Not Found",
+			expectedStatus: http.StatusNotFound,
+			expectedSubstr: "Repository or Owner not found",
 		},
 	}
 
@@ -165,7 +165,7 @@ func TestIssueHandler_DeleteIssue(t *testing.T) {
 				return nil, errors.New("simulated close error")
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedSubstr: "Error closing issue: simulated close error",
+			expectedSubstr: "Internal Server Error",
 		},
 		{
 			name:    "Repository Not Found (Wrong Owner/Repo)",
@@ -173,8 +173,8 @@ func TestIssueHandler_DeleteIssue(t *testing.T) {
 			mockClose: func(ctx context.Context, owner, repo string, issueNumber int) (*gh.Issue, error) {
 				return nil, errors.New("404 Not Found")
 			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedSubstr: "Error closing issue: 404 Not Found",
+			expectedStatus: http.StatusNotFound,
+			expectedSubstr: "Repository, Owner, or Issue not found",
 		},
 	}
 
@@ -243,15 +243,15 @@ func TestIssueHandler_ListIssues(t *testing.T) {
 				return nil, errors.New("simulated github list error")
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedSubstr: "Error listing issues: simulated github list error",
+			expectedSubstr: "Internal Server Error",
 		},
 		{
 			name: "Repository Not Found (Wrong Owner/Repo)",
 			mockList: func(ctx context.Context, owner, repo string, page, perPage int) ([]*gh.Issue, error) {
 				return nil, errors.New("404 Not Found")
 			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedSubstr: "Error listing issues: 404 Not Found",
+			expectedStatus: http.StatusNotFound,
+			expectedSubstr: "Repository or Owner not found",
 		},
 	}
 

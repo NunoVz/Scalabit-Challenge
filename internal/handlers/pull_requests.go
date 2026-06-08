@@ -1,9 +1,10 @@
 package handlers
 
 import (
-	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/NunoVz/Scalabit-Challenge/internal/github"
 )
@@ -31,7 +32,12 @@ func (h *PRHandler) CheckPRStatus(w http.ResponseWriter, r *http.Request) {
 
 	status, err := h.client.GetPRStatus(r.Context(), owner, repo, prNumber)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error checking PR status: %v", err), http.StatusInternalServerError)
+		if strings.Contains(err.Error(), "404") {
+			http.Error(w, "Repository, Owner, or PR not found", http.StatusNotFound)
+			return
+		}
+		slog.Error("Error checking PR status", "error", err, "owner", owner, "repo", repo, "pr_number", prNumber)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
